@@ -1,5 +1,5 @@
 # Dockerfile for ELK stack
-# Elasticsearch 2.1.1, Logstash 2.1.1, Kibana 4.3.1
+# Elasticsearch 2.2.0, Logstash 2.2.1-1, Kibana 4.4.1
 
 # Build with:
 # docker build -t <repo-user>/elk .
@@ -7,10 +7,10 @@
 # Run with:
 # docker run -p 5601:5601 -p 9200:9200 -p 5000:5000 -it --name elk <repo-user>/elk
 
-FROM phusion/baseimage
-MAINTAINER Thomas Cooper http://www.rackdeploy.com
-# Built on the original sebp/elk by Sebastien Pujadas http://pujadas.net
-ENV REFRESHED_AT 2016-01-23
+FROM centos:7
+MAINTAINER Raj Cherukuri
+# Built on the original sebp/elk by Sebastien Pujadas http://pujadas.net and thomascooper/elk-beats Thomas Cooper http://www.rackdeploy.com
+ENV REFRESHED_AT 2016-02-18
 
 
 ###############################################################################
@@ -19,24 +19,29 @@ ENV REFRESHED_AT 2016-01-23
 
 ### install Elasticsearch
 
-RUN apt-get update -qq \
- && apt-get install -qqy curl
+RUN yum update \
+ && yum -y install -y curl
 
-RUN curl http://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -
-RUN echo deb http://packages.elasticsearch.org/elasticsearch/2.x/debian stable main > /etc/apt/sources.list.d/elasticsearch-2.x.list
-RUN echo deb https://packages.elastic.co/beats/apt stable main > /etc/apt/sources.list.d/beats.list
+RUN rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+RUN touch /etc/yum.repos.d/elasticsearch.repo
+RUN cat `[elasticsearch-2.x]` >> /etc/yum.repos.d/elasticsearch.repo
+RUN cat `name=Elasticsearch repository for 2.x packages` >> /etc/yum.repos.d/elasticsearch.repo
+RUN cat `baseurl=http://packages.elastic.co/elasticsearch/2.x/centos` >> /etc/yum.repos.d/elasticsearch.repo
+RUN cat `gpgcheck=1` >> /etc/yum.repos.d/elasticsearch.repo
+RUN cat `gpgkey=http://packages.elastic.co/GPG-KEY-elasticsearch` >> /etc/yum.repos.d/elasticsearch.repo
+RUN cat `enabled=1` >> /etc/yum.repos.d/elasticsearch.repo
 
-RUN apt-get update -qq \
- && apt-get install -qqy \
+RUN yum update \
+ && yum -y install \
 		elasticsearch \
 		openjdk-7-jdk \
- && apt-get clean
+ && yum clean
 
 
 ### install Logstash
 
 ENV LOGSTASH_HOME /opt/logstash
-ENV LOGSTASH_PACKAGE logstash-2.1.1.tar.gz
+ENV LOGSTASH_PACKAGE logstash-2.2.tar.gz
 
 RUN mkdir ${LOGSTASH_HOME} \
  && curl -O https://download.elasticsearch.org/logstash/logstash/${LOGSTASH_PACKAGE} \
@@ -55,7 +60,7 @@ RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
 ### install Kibana
 
 ENV KIBANA_HOME /opt/kibana
-ENV KIBANA_PACKAGE kibana-4.3.1-linux-x64.tar.gz
+ENV KIBANA_PACKAGE kibana-4.4.1-linux-x64.tar.gz
 
 RUN mkdir ${KIBANA_HOME} \
  && curl -O https://download.elasticsearch.org/kibana/kibana/${KIBANA_PACKAGE} \
@@ -73,8 +78,8 @@ RUN sed -i -e 's#^KIBANA_HOME=$#KIBANA_HOME='$KIBANA_HOME'#' /etc/init.d/kibana 
 
 ### install Beats
 
-RUN apt-get install filebeat
-RUN update-rc.d filebeat defaults 95 10
+RUN yum -y install filebeat
+RUN chkconfig filebeat defaults 95 10
 
 
 ###############################################################################
