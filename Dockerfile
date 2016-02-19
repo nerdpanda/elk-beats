@@ -36,7 +36,9 @@ RUN yum update \
 		elasticsearch \
 		openjdk-7-jdk \
  && yum clean
-
+ 
+RUN /bin/systemctl daemon-reload
+RUN /bin/systemctl enable elasticsearch.service
 
 ### install Logstash
 
